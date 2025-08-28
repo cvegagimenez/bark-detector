@@ -1,0 +1,9 @@
+services:
+  mqtt:
+    image: arm64v8/eclipse-mosquitto:2.0
+    ports:
+      - 1883:1883
+    entrypoint: /usr/sbin/mosquitto -c /etc/mosquitto/mosquitto.conf
+    volumes:
+      - ./env/mqtt/etc/mosquitto:/etc/mosquitto:ro
+      - ./env/mqtt/var/log/mosquitto:/var/log/mosquitto:rw
