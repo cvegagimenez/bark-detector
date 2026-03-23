@@ -5,9 +5,11 @@ void setup() {
   Serial.begin(serialBaudRate);
   connectWifi();
   beginUdp();
+  connectMqtt();
 }
 
 void loop() {
+  ensureMqttConnected();
   readMeasure();
   delay(5);
 }

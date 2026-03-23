@@ -9,7 +9,12 @@ services:
       - ./env/mqtt/var/log/mosquitto:/var/log/mosquitto:rw
   otel-collector:
     image: otel/opentelemetry-collector:latest
+    command: ["--config=/etc/otel/otel.yaml"]
     ports:
       - 4317:4317
+      - 4318:4318
+    environment:
+      DT_TENANT: khv5234h
+      DT_API_TOKEN: ${DT_API_TOKEN}
     volumes:
       - ./env/otel/config:/etc/otel:ro
