@@ -7,3 +7,9 @@ services:
     volumes:
       - ./env/mqtt/etc/mosquitto:/etc/mosquitto:ro
       - ./env/mqtt/var/log/mosquitto:/var/log/mosquitto:rw
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    ports:
+      - 4317:4317
+    volumes:
+      - ./env/otel/config:/etc/otel:ro
