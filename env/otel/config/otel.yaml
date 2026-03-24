@@ -10,8 +10,8 @@ processors:
   batch:
 
 exporters:
-  logging:
-    loglevel: debug
+  debug:
+    verbosity: detailed
   otlphttp/dynatrace:
     endpoint: https://${env:DT_TENANT}.live.dynatrace.com/api/v2/otlp
     headers:
@@ -23,4 +23,4 @@ service:
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, otlphttp/dynatrace]
+      exporters: [debug, otlphttp/dynatrace]
