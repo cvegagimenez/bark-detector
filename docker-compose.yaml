@@ -5,6 +5,8 @@ services:
     environment:
       MQTT_BROKER: tcp://mqtt:1883
       OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: otel-collector:4318
+      DT_TENANT: ${DT_TENANT}
+      DT_API_TOKEN: ${DT_API_TOKEN}
     depends_on:
       - mqtt
       - otel-collector
@@ -24,7 +26,7 @@ services:
       - 4317:4317
       - 4318:4318
     environment:
-      DT_TENANT: khv5234h
+      DT_TENANT: ${DT_TENANT}
       DT_API_TOKEN: ${DT_API_TOKEN}
     volumes:
       - ./env/otel/config:/etc/otel:ro
