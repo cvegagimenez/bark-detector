@@ -36,7 +36,7 @@ func main() {
 	clientID := envOrDefault("MQTT_CLIENT_ID", defaultClientID)
 	topic := envOrDefault("MQTT_TOPIC", defaultTopic)
 
-	log.Printf("Go backend server started. broker=%s topic=%s", broker, topic)
+	log.Printf("Go backend server started. broker=%s topic=%s dt_tenant=%s", broker, topic, os.Getenv("DT_TENANT"))
 	mqttClient := mqtt.Connect(broker, clientID)
 
 	if err := mqtt.Subscribe(ctx, mqttClient, topic); err != nil {

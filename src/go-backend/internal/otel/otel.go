@@ -78,10 +78,19 @@ func newResource() (*resource.Resource, error) {
 }
 
 func newMeterProvider(ctx context.Context, res *resource.Resource) (*provider.MeterProvider, error) {
+	dtTenant := os.Getenv("DT_TENANT")
+	dtAPIToken := os.Getenv("DT_API_TOKEN")
+	if dtTenant == "" || dtAPIToken == "" {
+		log.Fatal("DT_TENANT and DT_API_TOKEN environment variables must be set")
+	}
+
 	metricExporter, err := otlpmetrichttp.New(
 		ctx,
-		otlpmetrichttp.WithEndpoint(envOrDefault("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT", "localhost:4318")),
-		otlpmetrichttp.WithInsecure(),
+		otlpmetrichttp.WithEndpoint(dtTenant+".sprint.dynatracelabs.com"),
+		otlpmetrichttp.WithURLPath("/api/v2/otlp/v1/metrics"),
+		otlpmetrichttp.WithHeaders(map[string]string{
+			"Authorization": "Api-Token " + dtAPIToken,
+		}),
 	)
 	if err != nil {
 		return nil, err
@@ -154,12 +163,4 @@ func RecordBarkPower(power float64, sensorID string) {
 	stateMu.Unlock()
 
 	log.Printf("Recorded bark power: %f", power)
-}
-
-func envOrDefault(key string, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-
-	return fallback
 }
