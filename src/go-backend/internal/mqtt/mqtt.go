@@ -2,9 +2,10 @@ package client
 
 import (
 	"context"
+	"log"
+
 	"github.com/cvegagimenez/bark-detector/go-backend/internal/controller"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"log"
 )
 
 func Connect(broker string, clientID string) mqtt.Client {
@@ -26,7 +27,6 @@ func Subscribe(ctx context.Context, client mqtt.Client, topic string) error {
 		}
 
 		controller.RecordMeasurement(measurement)
-		log.Printf("Received message on topic %s from sensor %s", msg.Topic(), measurement.SensorID)
 	}
 
 	if token := client.Subscribe(topic, 0, messageHandler); token.Wait() && token.Error() != nil {

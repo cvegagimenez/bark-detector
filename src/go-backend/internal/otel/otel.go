@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -114,7 +115,7 @@ func newMeterProvider(ctx context.Context, res *resource.Resource) (*provider.Me
 
 	meterProvider := provider.NewMeterProvider(
 		provider.WithResource(res),
-		provider.WithReader(provider.NewPeriodicReader(metricExporter)),
+		provider.WithReader(provider.NewPeriodicReader(metricExporter, provider.WithInterval(10*time.Second))),
 		provider.WithView(
 			dropMetricsView,
 		),
@@ -161,6 +162,4 @@ func RecordBarkPower(power float64, sensorID string) {
 	stateMu.Lock()
 	barkValueByID[sensorID] = power
 	stateMu.Unlock()
-
-	log.Printf("Recorded bark power: %f", power)
 }

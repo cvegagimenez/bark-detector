@@ -16,19 +16,14 @@ void connectWifi(){
   WiFi.begin(wifi_ssid, wifi_password);
   
   while ( WiFi.status() != WL_CONNECTED) {
-    Serial.println("Connecting to WiFi");
     delay(300);
   }
-  
-  Serial.println("\nYou're connected to the network");
-  Serial.println("Waiting for an ip address");
   
   while (WiFi.localIP() == INADDR_NONE) {
-    Serial.print(".");
     delay(300);
   }
   
-  Serial.println("\nIP Address obtained");
+  Serial.print("WiFi connected: ");
   Serial.println(WiFi.localIP());
 }
 
@@ -37,15 +32,13 @@ void connectMqtt() {
 
   uint8_t tries = 0;
   while (!mqtt_client.connected()) {
-    Serial.println("Connecting to MQTT broker");
     if (mqtt_client.connect(mqtt_client_id)) {
-      Serial.println("Connected to the MQTT broker");
+      Serial.println("MQTT connected");
       return;
     }
 
-    Serial.print(".");
     if (tries++ > 100) {
-      Serial.println("\nThe MQTT broker isn't responding");
+      Serial.println("MQTT broker not responding");
       while(1);
     }
     delay(100);
@@ -75,6 +68,5 @@ bool publishMetric(long epochTime, float rms) {
     return false;
   }
 
-  Serial.println("Published metric to MQTT: " + payload);
   return true;
 }

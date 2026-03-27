@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -45,7 +44,5 @@ func ParseMetricPayload(payload string) (Measurement, error) {
 }
 
 func RecordMeasurement(measurement Measurement) {
-	log.Printf("Message received at %s: bark_power=%f sensor_id=%s", measurement.Timestamp.Format(time.RFC3339), measurement.BarkPower, measurement.SensorID)
-
 	otel.RecordBarkPower(measurement.BarkPower, measurement.SensorID)
 }
