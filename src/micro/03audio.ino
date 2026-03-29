@@ -18,7 +18,7 @@ void readMeasure(){
     idx = 0;
     float rms = calculateRMS(samples);
     long epochTime = fetchTimeNtp();
-    Serial.println(String(epochTime) + " | " + String(rms));
+    publishMetric(epochTime, rms);
   }
 }
 

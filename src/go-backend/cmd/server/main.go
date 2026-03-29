@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
+	"os"
 	"time"
 
 	mqtt "github.com/cvegagimenez/bark-detector/go-backend/internal/mqtt"
@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	broker   = "tcp://localhost:1883"
-	clientID = "go-backend-client"
-	topic    = "test"
+	defaultBroker   = "tcp://localhost:1883"
+	defaultClientID = "go-backend-client"
+	defaultTopic    = "bark/metrics"
 )
 
 func main() {
@@ -25,12 +25,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-    defer func() {
-        err = errors.Join(err, otelShutdown(ctx))
-        log.Println(err)
-    }()
+	defer func() {
+		err = errors.Join(err, otelShutdown(ctx))
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 
-	fmt.Println("Go backend server started")
+	broker := envOrDefault("MQTT_BROKER", defaultBroker)
+	clientID := envOrDefault("MQTT_CLIENT_ID", defaultClientID)
+	topic := envOrDefault("MQTT_TOPIC", defaultTopic)
+
+	log.Printf("Go backend server started. broker=%s topic=%s dt_tenant=%s", broker, topic, os.Getenv("DT_TENANT"))
 	mqttClient := mqtt.Connect(broker, clientID)
 
 	if err := mqtt.Subscribe(ctx, mqttClient, topic); err != nil {
@@ -40,4 +46,12 @@ func main() {
 	for {
 		time.Sleep(1 * time.Second)
 	}
+}
+
+func envOrDefault(key string, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+
+	return fallback
 }

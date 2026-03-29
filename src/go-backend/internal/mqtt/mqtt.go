@@ -1,10 +1,11 @@
 package client
 
 import (
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"context"
 	"log"
+
 	"github.com/cvegagimenez/bark-detector/go-backend/internal/controller"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 func Connect(broker string, clientID string) mqtt.Client {
@@ -13,19 +14,19 @@ func Connect(broker string, clientID string) mqtt.Client {
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		log.Fatalf("Error connecting to MQTT broker: %v", token.Error())
 	}
-	
+
 	return client
 }
 
 func Subscribe(ctx context.Context, client mqtt.Client, topic string) error {
 	messageHandler := func(client mqtt.Client, msg mqtt.Message) {
-		payload := string(msg.Payload())
-		err := controller.GetMaxBarkPower(ctx, payload)
+		measurement, err := controller.ParseMetricPayload(string(msg.Payload()))
 		if err != nil {
 			log.Printf("Error processing message on topic %s: %v", msg.Topic(), err)
 			return
 		}
-		log.Printf("Received message on topic %s", msg.Topic())
+
+		controller.RecordMeasurement(measurement)
 	}
 
 	if token := client.Subscribe(topic, 0, messageHandler); token.Wait() && token.Error() != nil {

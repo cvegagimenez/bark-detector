@@ -1,4 +1,16 @@
 services:
+  backend:
+    build:
+      context: ./src/go-backend
+    environment:
+      MQTT_BROKER: tcp://mqtt:1883
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: otel-collector:4318
+      DT_TENANT: ${DT_TENANT}
+      DT_API_TOKEN: ${DT_API_TOKEN}
+    depends_on:
+      - mqtt
+      - otel-collector
+    restart: unless-stopped
   mqtt:
     image: arm64v8/eclipse-mosquitto:2.0
     ports:
@@ -9,7 +21,12 @@ services:
       - ./env/mqtt/var/log/mosquitto:/var/log/mosquitto:rw
   otel-collector:
     image: otel/opentelemetry-collector:latest
+    command: ["--config=/etc/otel/otel.yaml"]
     ports:
       - 4317:4317
+      - 4318:4318
+    environment:
+      DT_TENANT: ${DT_TENANT}
+      DT_API_TOKEN: ${DT_API_TOKEN}
     volumes:
       - ./env/otel/config:/etc/otel:ro

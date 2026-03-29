@@ -1,49 +1,48 @@
 package controller
 
 import (
-	"log"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
-	"context"
 
 	"github.com/cvegagimenez/bark-detector/go-backend/internal/otel"
 )
 
-var (
-	maxBarkPower float64
-)
+type Measurement struct {
+	Timestamp time.Time
+	SensorID  string
+	BarkPower float64
+}
 
-func GetMaxBarkPower(ctx context.Context, payload string) error {
+func ParseMetricPayload(payload string) (Measurement, error) {
 	splittedPayload := strings.Split(payload, "|")
-
-	epochInt, err := strconv.ParseInt(splittedPayload[0], 10, 64)
-	if err != nil {
-		log.Fatalf("Error converting epoch time: %v", err)
-		return err
+	if len(splittedPayload) != 3 {
+		return Measurement{}, fmt.Errorf("invalid payload format %q: expected epoch|sensorID|barkPower", payload)
 	}
 
-	sensorID := splittedPayload[1]
+	epochInt, err := strconv.ParseInt(strings.TrimSpace(splittedPayload[0]), 10, 64)
+	if err != nil {
+		return Measurement{}, fmt.Errorf("convert epoch time: %w", err)
+	}
+
+	sensorID := strings.TrimSpace(splittedPayload[1])
 	if sensorID == "" {
-		log.Fatalf("Error converting sensor ID: %v", err)
-		return err
+		return Measurement{}, fmt.Errorf("sensor ID is empty")
 	}
 
-	barkPower, err := strconv.ParseFloat(splittedPayload[2], 64)
+	barkPower, err := strconv.ParseFloat(strings.TrimSpace(splittedPayload[2]), 64)
 	if err != nil {
-		log.Fatalf("Error converting bark power: %v", err)
-		return err
+		return Measurement{}, fmt.Errorf("convert bark power: %w", err)
 	}
 
-    if barkPower > maxBarkPower {
-        maxBarkPower = barkPower
-    }
+	return Measurement{
+		Timestamp: time.Unix(epochInt, 0),
+		SensorID:  sensorID,
+		BarkPower: barkPower,
+	}, nil
+}
 
-    parsedTime := time.Unix(epochInt, 0)
-
-    log.Printf("Message received at %s: %v", parsedTime, maxBarkPower)
-
-    otel.RecordBarkPower(maxBarkPower, sensorID)
-
-    return nil
+func RecordMeasurement(measurement Measurement) {
+	otel.RecordBarkPower(measurement.BarkPower, measurement.SensorID)
 }

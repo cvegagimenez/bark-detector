@@ -20,7 +20,6 @@ precise_sntp sntp(udp, timeServer);
 */
 void beginUdp(){
     udp.begin(localPort);
-    Serial.println("Started UDP");
 }
 
 /*

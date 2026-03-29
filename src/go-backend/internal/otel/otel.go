@@ -4,23 +4,25 @@ import (
 	"context"
 	"errors"
 	"log"
+	"os"
 	"regexp"
+	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	stdoutmetric "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/metric"
-
-	//"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	provider "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 var (
-	meter       metric.Meter
-	barkValue   float64
-	ID          string
+	meter metric.Meter
+
+	stateMu       sync.RWMutex
+	barkValueByID = map[string]float64{}
 )
 
 func SetupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, err error) {
@@ -77,8 +79,20 @@ func newResource() (*resource.Resource, error) {
 }
 
 func newMeterProvider(ctx context.Context, res *resource.Resource) (*provider.MeterProvider, error) {
-	metricExporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
-	//metricExporter, err := otlpmetrichttp.New(ctx)
+	dtTenant := os.Getenv("DT_TENANT")
+	dtAPIToken := os.Getenv("DT_API_TOKEN")
+	if dtTenant == "" || dtAPIToken == "" {
+		log.Fatal("DT_TENANT and DT_API_TOKEN environment variables must be set")
+	}
+
+	metricExporter, err := otlpmetrichttp.New(
+		ctx,
+		otlpmetrichttp.WithEndpoint(dtTenant+".sprint.dynatracelabs.com"),
+		otlpmetrichttp.WithURLPath("/api/v2/otlp/v1/metrics"),
+		otlpmetrichttp.WithHeaders(map[string]string{
+			"Authorization": "Api-Token " + dtAPIToken,
+		}),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +115,7 @@ func newMeterProvider(ctx context.Context, res *resource.Resource) (*provider.Me
 
 	meterProvider := provider.NewMeterProvider(
 		provider.WithResource(res),
-		provider.WithReader(provider.NewPeriodicReader(metricExporter)),
+		provider.WithReader(provider.NewPeriodicReader(metricExporter, provider.WithInterval(10*time.Second))),
 		provider.WithView(
 			dropMetricsView,
 		),
@@ -111,23 +125,29 @@ func newMeterProvider(ctx context.Context, res *resource.Resource) (*provider.Me
 }
 
 func setupMetrics() error {
-    barkGauge, err := meter.Float64ObservableGauge(
-        "bark_power",
-        metric.WithDescription("Maximum bark power detected"),
-        metric.WithUnit("RMS"),
-    )
-    if err != nil {
-        return err
-    }
+	barkGauge, err := meter.Float64ObservableGauge(
+		"bark_power",
+		metric.WithDescription("Latest bark power measurement received from the sensor"),
+		metric.WithUnit("RMS"),
+	)
+	if err != nil {
+		return err
+	}
 
 	_, err = meter.RegisterCallback(
 		func(ctx context.Context, observer metric.Observer) error {
-			observer.ObserveFloat64(
-				barkGauge, 
-				barkValue, 
-				metric.WithAttributes(
-					attribute.String("sensorID", ID),
-			))
+			stateMu.RLock()
+			defer stateMu.RUnlock()
+
+			for sensorID, barkValue := range barkValueByID {
+				observer.ObserveFloat64(
+					barkGauge,
+					barkValue,
+					metric.WithAttributes(
+						attribute.String("sensor.id", sensorID),
+					),
+				)
+			}
 			return nil
 		},
 		barkGauge,
@@ -139,7 +159,7 @@ func setupMetrics() error {
 }
 
 func RecordBarkPower(power float64, sensorID string) {
-    barkValue = power
-	ID = sensorID
-	log.Printf("Recorded bark power: %f", power)
+	stateMu.Lock()
+	barkValueByID[sensorID] = power
+	stateMu.Unlock()
 }
