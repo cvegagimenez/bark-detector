@@ -15,6 +15,12 @@ A system that detects and monitors dog barks using an ESP32 microcontroller with
 
 ![ESP32 + MAX9814 wiring](docs/esp32_bb.jpg)
 
+### Time Series (4 hours)
+
+The chart below shows `bark_power` in a 4-hour window, where barking periods appear as visible spikes in the time series.
+
+![bark_power time series (4 hours)](docs/timeseries.png)
+
 ### Connections
 
 | MAX9814 Pin | ESP32 Pin |
@@ -51,6 +57,25 @@ The ESP32 publishes to the topic `bark/metrics` with the format:
 Example: `1711180800|esp32-mic-01|12.3400`
 
 A measurement is computed as the RMS of 100 ADC samples (~every 500 ms at a 5 ms loop delay).
+
+### What is RMS and why use it?
+
+RMS means **Root Mean Square**. It is a standard way to represent the effective magnitude (energy level) of a signal that oscillates around zero, like microphone audio.
+
+For a window of $N$ samples $x_1, x_2, ..., x_N$:
+
+$$
+\mathrm{RMS} = \sqrt{\frac{1}{N}\sum_{i=1}^{N} x_i^2}
+$$
+
+We use RMS for bark metrics because it:
+
+- captures sound intensity (signal power) better than a simple average,
+- avoids positive and negative waveform cancellation,
+- smooths short spikes by using a sample window,
+- gives a stable, comparable value over time for thresholding and alerting.
+
+In this project, each published value is the RMS of 100 ADC samples, so the `bark_power` metric reflects recent bark loudness in a robust way.
 
 ### Configuration
 
